@@ -4,7 +4,10 @@ const cors = require('cors');
 
 const app = express();
 app.use(cors());
-app.use(express.json()); // Para poder recibir datos en formato JSON
+
+// ⚠️ AQUÍ ESTÁ EL AJUSTE CLAVE: Ampliamos el límite para que acepte la foto en Base64
+app.use(express.json({ limit: '50mb' })); 
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // 1. CONEXIÓN A XAMPP (MYSQL)
 const db = mysql.createPool({
@@ -44,7 +47,8 @@ app.get('/api/empresas', (req, res) => {
 
 // RUTA DEFINITIVA: Validada con tu estructura real de phpMyAdmin
 app.post('/api/asistencia/checar-temporal', (req, res) => {
-  const { empleado_id, empresa_id } = req.body;
+  // Aquí ya agregamos 'imagenBase64' para recibirla desde el cel
+  const { empleado_id, empresa_id, imagenBase64 } = req.body;
 
   if (!empleado_id || !empresa_id) {
     return res.status(400).json({ success: false, error: 'Faltan datos obligatorios (empleado_id o empresa_id)' });
@@ -90,6 +94,13 @@ app.post('/api/asistencia/checar-temporal', (req, res) => {
         return res.status(500).json({ success: false, error: 'No se pudo guardar el registro' });
       }
 
+      // ESTO TE CONFIRMARÁ EN TU TERMINAL QUE LA FOTO PASÓ LA ADUANA DE EXPRESS
+      if (imagenBase64) {
+        console.log(`📸 [FOTO RECIBIDA] Tamaño del Base64: ${imagenBase64.length} caracteres.`);
+      } else {
+        console.log('⚠️ Se registró asistencia pero no llegó ninguna imagen.');
+      }
+
       const mensajeExito = nuevoTipo === 'ENTRADA' 
         ? 'Registro de ENTRADA guardado con éxito' 
         : 'Registro de SALIDA guardado con éxito';
@@ -104,8 +115,6 @@ app.post('/api/asistencia/checar-temporal', (req, res) => {
     });
   });
 });
-
-
 
 // 3. ARRANCAR EL SERVIDOR
 const PORT = 3000;
